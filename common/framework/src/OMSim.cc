@@ -1,13 +1,3 @@
-/**
- * @file OMSim.cc
- * @brief Implementation of the OMSim class.
- * 
- * @warning
- * There are a few material related arguments that are depracated as for example the glass and gel arguments. This were used to easily change materials during the OM development phase. Check @link OMSimInputData::getMaterial @endlink and modify the respective OM class if you want to use these args.
- * 
- * @ingroup common
- */
-
 #include "OMSim.hh"
 #include "OMSimTools.hh"
 #include "OMSimLogger.hh"
@@ -51,17 +41,25 @@ void OMSim::setGeneralOptions()
     ("gel", po::value<G4int>()->default_value(1), "DEPRECATED. Index to select gel type [Wacker = 0, Chiba = 1, IceCube = 2, Wacker_company = 3]")
     ("reflective_surface", po::value<G4int>()->default_value(0), "DEPRECATED. Index to select reflective surface type [Surf_V95Gel = 0, Surf_V98Gel = 1, Surf_Aluminium = 2, Surf_Total98 = 3]")
     ("pmt_model", po::value<G4int>()->default_value(0), "DEPRECATED. R15458 (mDOM) = 0,  R7081 (DOM) = 1, 4inch (LOM) = 2, R5912_20_100 (D-Egg)= 3")
-    ("threads", po::value<int>()->default_value(1), "number of threads to use.");
+    ("threads", po::value<int>()->default_value(1), "number of threads to use.")
+    ("distance", po::value<G4double>()->default_value(1000), "distance of the source from the origin in mm")
+    ("radius", po::value<G4double>()->default_value(80), "radius of the source in mm")
+    ("theta", po::value<G4double>()->default_value(0), "theta angle of the source in deg")
+    ("phi", po::value<G4double>()->default_value(0), "phi angle of the source in deg")
+    ("wavelength", po::value<G4double>()->default_value(500), "wavelength of the source in nm")
+    ("energy", po::value<G4double>()->default_value(0.1), "energy of the source in GeV");
 }
 
-void OMSim::initialLoggerConfiguration()
-{
-    g_logger = spdlog::stdout_color_mt("console");
-    g_logger->set_level(spdlog::level::info); // Set the desired log level
-    g_logger->set_pattern("%^[%H:%M:%S.%e][t %t][%l][%s:%#]%$ %v");
-    spdlog::set_default_logger(g_logger); 
-}
- 
+ void OMSim::initialLoggerConfiguration()
+ {
+     if (!g_logger)
+     {
+         g_logger = spdlog::stdout_color_mt("console");
+         g_logger->set_level(spdlog::level::info); // Set the desired log level
+         g_logger->set_pattern("%^[%H:%M:%S.%e][t %t][%l][%s:%#]%$ %v");
+         spdlog::set_default_logger(g_logger);
+     }
+ }
 
 spdlog::level::level_enum getLogLevelFromString(const std::string &p_levelString)
 {

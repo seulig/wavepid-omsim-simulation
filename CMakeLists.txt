@@ -4,8 +4,10 @@ cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 # Project name
 project(OMSim)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(CMAKE_INSTALL_RPATH "/opt/homebrew/geant4-v11.2.2-install/lib")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
-# Add these lines for debug information
+# Debug information
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
 
@@ -19,31 +21,39 @@ else()
     find_package(Geant4 REQUIRED)
 endif()
 
-add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS) 
+add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
-# Set path to Geant4 libraries
-list(APPEND CMAKE_MODULE_PATH ${Geant4_DIR}/Modules)
-
-# Set paths for OpenSSL
-set(OPENSSL_ROOT_DIR /usr/lib/x86_64-linux-gnu)
-set(OPENSSL_LIBRARIES /usr/lib/x86_64-linux-gnu)
-find_package(OpenSSL REQUIRED)
+# Set RPATH for runtime linkage
+set(CMAKE_INSTALL_RPATH "/opt/homebrew/geant4-v11.2.2-install/lib")
+set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
 # For logging with spdlog
 find_package(spdlog REQUIRED)
 
-# Include OpenSSL's headers in the project
-include_directories(${OPENSSL_INCLUDE_DIR})
-
 # Find Boost library and specify which components to use
 find_package(Boost REQUIRED COMPONENTS program_options)
 
-# Include Geant4 headers in the project
+# Set paths for OpenSSL
+set(OPENSSL_ROOT_DIR /opt/homebrew/opt/openssl@3)
+set(OPENSSL_LIBRARIES /opt/homebrew/opt/openssl@3/lib)
+find_package(OpenSSL REQUIRED)
+include_directories(${OPENSSL_INCLUDE_DIR})
+
+# Include Geant4 headers
 include(${Geant4_USE_FILE})
 
-# Find ROOT and include its headers in the project
-find_package(ROOT)
-include(${ROOT_USE_FILE})
+# Find ROOT and include its headers and libraries
+find_package(ROOT REQUIRED)
+include_directories(${ROOT_INCLUDE_DIRS})
+list(APPEND COMMON_LIBRARIES ${ROOT_LIBRARIES})
+
+# Add Geant4 library path for runtime linkage
+list(APPEND COMMON_LIBRARIES -Wl,-rpath,/opt/homebrew/geant4-v11.2.2-install/lib)
+
+# Include ROOT macros and set them up
+if(ROOT_FOUND)
+    include(${ROOT_USE_FILE})
+endif()
 
 # Define a variable with all the libraries
 set(COMMON_LIBRARIES 
@@ -52,6 +62,7 @@ set(COMMON_LIBRARIES
     ${OPENSSL_LIBRARIES}
     Boost::program_options
     spdlog::spdlog
+    /opt/homebrew/geant4-v11.2.2-install/lib/libG4RayTracer.dylib
     $<$<BOOL:${MINGW}>:ws2_32>
 )
 
@@ -61,4 +72,3 @@ set(COMMON_LIBRARIES ${COMMON_LIBRARIES} CACHE INTERNAL "")
 # Include the subdirectories
 add_subdirectory(common)
 add_subdirectory(simulations)
-

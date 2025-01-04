@@ -1,30 +1,49 @@
 #include "OMSimPrimaryGeneratorAction.hh"
 
-#include <G4GeneralParticleSource.hh>
-#include <G4ParticleTypes.hh>
-#include <G4RandomTools.hh>
+#include <G4ParticleGun.hh>
+#include <G4ParticleTable.hh>
+#include <G4ParticleDefinition.hh>
+#include <G4SystemOfUnits.hh>
+#include <G4Event.hh>
+#include "OMSimCommandArgsTable.hh"
+#include "OMSimPMTConstruction.hh"
+#include "OMSimOpticalModule.hh"
+#include "OMSimPDOM.hh"
 
-thread_local std::unique_ptr<G4GeneralParticleSource> OMSimPrimaryGeneratorAction::m_particleSource;
-G4Mutex OMSimPrimaryGeneratorAction::m_mutex;
-OMSimPrimaryGeneratorAction::OMSimPrimaryGeneratorAction()
-{
-	if (!m_particleSource)
-	{
-	m_particleSource = std::make_unique<G4GeneralParticleSource>();
-	}
+
+/**
+ * @brief Constructs the world volume (sphere).
+ */
+
+
+
+#include <Randomize.hh>
+
+OMSimPrimaryGeneratorAction::OMSimPrimaryGeneratorAction() {
+    fParticleGun = new G4ParticleGun(1);
+
+    G4ParticleTable* particleTable = G4ParticleTable::GetParticleTable();
+    G4ParticleDefinition* particle = particleTable->FindParticle("e-");
+
+    if (!particle) {
+        G4Exception("PrimaryGeneratorAction", "InvalidParticle", FatalException, "Particle type e- not found");
+    }
+
+    fParticleGun->SetParticleDefinition(particle);
+    fParticleGun->SetParticleEnergy(10 * GeV);
+
+    G4ThreeVector position(-2.7*m, 0.0*m, 0.3*m);
+    fParticleGun->SetParticlePosition(position);
+
+    G4ThreeVector direction(1, 0.0, 0.0);
+    fParticleGun->SetParticleMomentumDirection(direction.unit());
+
 }
 
-OMSimPrimaryGeneratorAction::~OMSimPrimaryGeneratorAction()
-{
-
+OMSimPrimaryGeneratorAction::~OMSimPrimaryGeneratorAction() {
+    delete fParticleGun;
 }
- 
-void OMSimPrimaryGeneratorAction::GeneratePrimaries(G4Event *p_event)
-{
-	if (m_particleSource)
-	{
-		std::lock_guard<G4Mutex> lock(m_mutex);
-		m_particleSource->SetParticlePolarization(G4RandomDirection());
-		m_particleSource->GeneratePrimaryVertex(p_event);
-	}
+
+void OMSimPrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent) {
+    fParticleGun->GeneratePrimaryVertex(anEvent);
 }

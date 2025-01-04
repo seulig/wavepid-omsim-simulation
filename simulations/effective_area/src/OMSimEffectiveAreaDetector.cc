@@ -10,16 +10,39 @@
 #include "OMSimSensitiveDetector.hh"
 #include "G4LogicalVolume.hh"
 #include "G4Box.hh"
+#include "G4MaterialPropertiesTable.hh"
+#include "G4Material.hh"
+#include "G4NistManager.hh"
+
 
 /**
  * @brief Constructs the world volume (sphere).
  */
 void OMSimEffectiveAreaDetector::constructWorld()
 {
-    m_worldSolid = new G4Orb("World", OMSimCommandArgsTable::getInstance().get<G4double>("world_radius") * m);
-    m_worldLogical = new G4LogicalVolume(m_worldSolid, m_data->getMaterial("argWorld"), "World_log", 0, 0, 0);
+    // Use the world radius provided via command-line arguments
+    G4double worldRadius = 1.0;//OMSimCommandArgsTable::getInstance().get<G4double>("world_radius");
+    m_worldSolid = new G4Orb("World", worldRadius * m);
+
+    // Configure material properties for water
+    G4Material* water = G4Material::GetMaterial("G4_WATER");
+    if (!water->GetMaterialPropertiesTable())
+    {
+        G4MaterialPropertiesTable* waterMPT = new G4MaterialPropertiesTable();
+        const G4int nEntries = 2;
+        G4double photonEnergies[nEntries] = {2.0 * eV, 3.5 * eV};
+        G4double refractiveIndices[nEntries] = {1.33, 1.33}; // Refractive index of water
+        waterMPT->AddProperty("RINDEX", photonEnergies, refractiveIndices, nEntries);
+        water->SetMaterialPropertiesTable(waterMPT);
+    }
+
+    m_worldLogical = new G4LogicalVolume(m_worldSolid, water, "World_log", 0, 0, 0);
     m_worldPhysical = new G4PVPlacement(0, G4ThreeVector(0., 0., 0.), m_worldLogical, "World_phys", 0, false, 0);
-    G4VisAttributes *worldVis = new G4VisAttributes(G4Colour(0.45, 0.5, 0.35, 0.));
+
+    // Set visualization attributes for the world
+    G4VisAttributes *worldVis = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0, 0.2)); // Transparent blue for water
+    worldVis->SetVisibility(true);
+    worldVis->SetForceSolid(true);
     m_worldLogical->SetVisAttributes(worldVis);
 }
 
@@ -29,67 +52,55 @@ void OMSimEffectiveAreaDetector::constructWorld()
  */
 void OMSimEffectiveAreaDetector::constructDetector()
 {
-
     OMSimHitManager &hitManager = OMSimHitManager::getInstance();
 
+    // Get detector type and whether to place the harness
     bool placeHarness = OMSimCommandArgsTable::getInstance().get<bool>("place_harness");
-
     OMSimOpticalModule *opticalModule = nullptr;
 
+    // Select the detector type
     switch (OMSimCommandArgsTable::getInstance().get<G4int>("detector_type"))
     {
-
     case 0:
-    {
         log_critical("No custom detector implemented!");
         break;
-    }
-    case 1:
-    {
-        log_info("Constructing single PMT");
-        OMSimPMTConstruction *managerPMT = new OMSimPMTConstruction();
-        managerPMT->selectPMT("argPMT");
-        managerPMT->includeHAcoating();
-        managerPMT->construction();
-        managerPMT->placeIt(G4ThreeVector(0, 0, 0), G4RotationMatrix(), m_worldLogical, "_0");
-        hitManager.setNumberOfPMTs(1, 0);
-        managerPMT->configureSensitiveVolume(this, "/PMT/0");
-        break;
-    }
-    case 2:
-    {
-
-        opticalModule = new mDOM(placeHarness);
-        break;
-    }
     case 3:
-    {
-
+        log_info("Constructing pDOM");
         opticalModule = new pDOM(placeHarness);
         break;
-    }
-    case 4:
-    {
-
-        opticalModule = new LOM16(placeHarness);
-        break;
-    }
-    case 5:
-    {
-
-        opticalModule = new LOM18(placeHarness);
-        break;
-    }
-    case 6:
-    {
-        opticalModule = new DEGG(placeHarness);
-        break;
-    }
+    default:
+        log_critical("Invalid detector type or unsupported detector type!");
+        return;
     }
 
+    // Place and configure the detector
     if (opticalModule)
     {
         opticalModule->placeIt(G4ThreeVector(0, 0, 0), G4RotationMatrix(), m_worldLogical, "");
         opticalModule->configureSensitiveVolume(this);
+
+        // Log the placement of the optical module
+        log_debug("Optical module placed in the world volume.");
+
+        // Set visualization attributes for the detector
+        G4LogicalVolume *domLogical = m_worldLogical->GetDaughter(0)->GetLogicalVolume();
+        if (domLogical)
+        {
+            G4VisAttributes *domVis = new G4VisAttributes(G4Colour(1.0, 0.0, 0.0)); // Red color for DOM
+            domVis->SetVisibility(true);
+            domVis->SetForceSolid(true);
+            domLogical->SetVisAttributes(domVis);
+
+            log_debug("Visualization attributes set for the optical module logical volume.");
+        }
+        else
+        {
+            log_error("Failed to retrieve the logical volume of the optical module.");
+        }
+    
     }
+ 
+ 
+
+ 
 }
