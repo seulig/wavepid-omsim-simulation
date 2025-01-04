@@ -1,3 +1,4 @@
+// File: /simulations/effective_area/src/OMSimPrimaryGeneratorAction.cc
 #include "OMSimPrimaryGeneratorAction.hh"
 
 #include <G4ParticleGun.hh>
@@ -30,9 +31,9 @@ OMSimPrimaryGeneratorAction::OMSimPrimaryGeneratorAction() {
     }
 
     fParticleGun->SetParticleDefinition(particle);
-    fParticleGun->SetParticleEnergy(10 * GeV);
+    fParticleGun->SetParticleEnergy(0.91 * GeV);
 
-    G4ThreeVector position(-2.7*m, 0.0*m, 0.3*m);
+    G4ThreeVector position(-1.7*m, 0.0*m, 0.2*m);
     fParticleGun->SetParticlePosition(position);
 
     G4ThreeVector direction(1, 0.0, 0.0);

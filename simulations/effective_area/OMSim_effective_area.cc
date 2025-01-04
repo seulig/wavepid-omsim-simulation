@@ -1,3 +1,4 @@
+// File: /simulations/effective_area/OMSim_effective_area.cc
 /**
  * @file 
  * @ingroup EffectiveArea
@@ -37,6 +38,8 @@ void runEffectiveAreaSimulation()
         {
             scanner->runSingleAngularScan(phis.at(i), thetas.at(i));
             analysisManager.writeScan(phis.at(i), thetas.at(i), args.get<G4double>("wavelength"));
+            if (args.get<bool>("waveform"))
+                analysisManager.writeHitInformation(args.get<G4double>("wavelength"));
             hitManager.reset();
         }
     }
@@ -44,6 +47,8 @@ void runEffectiveAreaSimulation()
     {
         scanner->runSingleAngularScan(args.get<G4double>("phi"), args.get<G4double>("theta"));
         analysisManager.writeScan(args.get<G4double>("phi"), args.get<G4double>("theta"), args.get<G4double>("wavelength"));
+        if (args.get<bool>("waveform"))
+            analysisManager.writeHitInformation(args.get<G4double>("wavelength"));
         hitManager.reset();
     }
 }
@@ -63,7 +68,8 @@ void addModuleOptions(OMSim *p_simulation)
         ("phi,f", po::value<G4double>()->default_value(0.0), "phi (= azimuth) in deg")
         ("wavelength,l", po::value<G4double>()->default_value(400.0), "wavelength of incoming light in nm")
         ("angles_file,i", po::value<std::string>(), "The input angle pairs file to be scanned. The file should contain two columns, the first column with the theta (zenith) and the second with phi (azimuth) in degrees.")
-        ("no_header", po::bool_switch(), "if given, the header of the output file will not be written");
+        ("no_header", po::bool_switch(), "if given, the header of the output file will not be written")
+        ("waveform", po::bool_switch(), "if given, the waveform of the hits will be saved in a separate file");
 
     p_simulation->extendOptions(effectiveAreaOptions);
 }

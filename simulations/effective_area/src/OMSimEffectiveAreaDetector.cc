@@ -1,3 +1,4 @@
+// File: /simulations/effective_area/src/OMSimEffectiveAreaDetector.cc
 #include "OMSimEffectiveAreaDetector.hh"
 #include "OMSimPDOM.hh"
 #include "OMSimLOM16.hh"
@@ -14,14 +15,13 @@
 #include "G4Material.hh"
 #include "G4NistManager.hh"
 
-
 /**
  * @brief Constructs the world volume (sphere).
  */
 void OMSimEffectiveAreaDetector::constructWorld()
 {
     // Use the world radius provided via command-line arguments
-    G4double worldRadius = 1.0;//OMSimCommandArgsTable::getInstance().get<G4double>("world_radius");
+    G4double worldRadius = OMSimCommandArgsTable::getInstance().get<G4double>("world_radius");
     m_worldSolid = new G4Orb("World", worldRadius * m);
 
     // Configure material properties for water
@@ -78,7 +78,7 @@ void OMSimEffectiveAreaDetector::constructDetector()
     {
         opticalModule->placeIt(G4ThreeVector(0, 0, 0), G4RotationMatrix(), m_worldLogical, "");
         opticalModule->configureSensitiveVolume(this);
-
+        
         // Log the placement of the optical module
         log_debug("Optical module placed in the world volume.");
 
@@ -99,8 +99,4 @@ void OMSimEffectiveAreaDetector::constructDetector()
         }
     
     }
- 
- 
-
- 
 }

@@ -1,9 +1,4 @@
-/**
- * @file
- * @brief Defines the OMSimEffectiveAreaDetector class for effective area simulation detector construction.
- * @ingroup EffectiveArea
- */
-
+// File: /simulations/effective_area/include/OMSimEffectiveAreaDetector.hh
 #pragma once
 
 #include "OMSimDetectorConstruction.hh"
