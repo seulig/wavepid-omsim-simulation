@@ -1,4 +1,3 @@
-// File: /simulations/effective_area/src/OMSimEffectiveAreaAnalyisis.cc
 #include "OMSimEffectiveAreaAnalyisis.hh"
 #include "OMSimCommandArgsTable.hh"
 #include "OMSimHitManager.hh"
@@ -26,7 +25,12 @@ void OMSimEffectiveAreaAnalyisis::writeHitInformation(double pWavelength)
 {
     OMSimHitManager &hitManager = OMSimHitManager::getInstance();
     HitStats hits = hitManager.getMergedHitsOfModule();
-    G4String fileName = m_outputFileName + "_hits.dat";
+    G4String fileName = m_outputFileName;
+    // Remove the .dat extension if it exists
+    if (fileName.size() >= 4 && fileName.substr(fileName.size() - 4) == ".dat") {
+        fileName = fileName.substr(0, fileName.size() - 4);
+    }
+    fileName += "_hits.dat";
     std::fstream dataFile;
     dataFile.open(fileName.c_str(), std::ios::out | std::ios::app);
     dataFile << "# eventID \t hitTime \t flightTime \t pathLenght \t energy \t PMTnr \t directionX \t directionY \t directionZ \t localPositionX \t localPositionY \t localPositionZ \t globalPositionX \t globalPositionY \t globalPositionZ \t generationDetectionDistance \t PE \t transitTime \t detectionProbability \t wavelength" << G4endl;
@@ -54,44 +58,6 @@ void OMSimEffectiveAreaAnalyisis::writeHitInformation(double pWavelength)
         double pe = hits.PMTresponse.at(i).PE;
         double transitTime = hits.PMTresponse.at(i).transitTime;
         double detectionProbability = hits.PMTresponse.at(i).detectionProbability;
-
-        if (!OMSimCommandArgsTable::getInstance().get<bool>("simple_PMT"))
-        {
-            G4double meanPE = 0;
-            G4double SPEresolution = 0;
-            if (OMSimHitManager::getInstance().areThereHitsInModuleSingleThread())
-            {
-                OMSimPMTResponse* pmtResponse = OMSimHitManager::getInstance().getSingleThreadHitsOfModule().PMTresponse.at(0).PMTResponse;
-                if (pmtResponse)
-                {
-                    meanPE = pmtResponse->getCharge(pWavelength);
-                    SPEresolution = pmtResponse->wavelengthInterpolatedValue(pmtResponse->m_gainResolutionG2Dmap, pWavelength, pWavelength);
-                }
-            }
-            double sampledPE = -1;
-            double counter = 0;
-            while (sampledPE < 0)
-            {
-                sampledPE = G4RandGauss::shoot(meanPE, SPEresolution);
-                counter++;
-                if (counter > 10)
-                    sampledPE = 0;
-            }
-            pe = sampledPE;
-            
-            G4double meanTransitTime = 0;
-            G4double TTS = 0;
-            if (OMSimHitManager::getInstance().areThereHitsInModuleSingleThread())
-            {
-                OMSimPMTResponse* pmtResponse = OMSimHitManager::getInstance().getSingleThreadHitsOfModule().PMTresponse.at(0).PMTResponse;
-                if (pmtResponse)
-                {
-                    meanTransitTime = pmtResponse->getTransitTime(pWavelength);
-                    TTS = pmtResponse->wavelengthInterpolatedValue(pmtResponse->m_transitTimeSpreadG2Dmap, pWavelength, pWavelength);
-                }
-            }
-            transitTime = G4RandGauss::shoot(meanTransitTime, TTS);
-        }
 
         dataFile << pe << "\t";
         dataFile << transitTime / ns << "\t";
