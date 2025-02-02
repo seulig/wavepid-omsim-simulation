@@ -122,24 +122,17 @@ int OMSim::determineNumberOfThreads()
  */
 void OMSim::initialiseSimulation(OMSimDetectorConstruction* p_detectorConstruction)
 {
-    OMSimHitManager::init();
-    
     OMSimCommandArgsTable &args = OMSimCommandArgsTable::getInstance();
     Tools::ensureDirectoryExists(args.get<std::string>("output_file"));
-
     std::string fileName = args.get<std::string>("output_file") + "_args.json";
     if (args.get<bool>("save_args"))
         args.writeToJson(fileName);
 
-    //CLHEP::HepRandom::setTheEngine(new CLHEP::RanluxEngine(args.get<long>("seed"), 3));
-    //CLHEP::HepRandom::setTheEngine(new CLHEP::MixMaxRng(args.get<long>("seed")));
-    //G4Random::setTheEngine(new CLHEP::MixMaxRng(args.get<long>("seed")));
     long seed = args.get<long>("seed");
     G4Random::setTheEngine(new CLHEP::MixMaxRng(seed));
     G4Random::setTheSeed(seed);
 
     m_runManager = std::make_unique<G4MTRunManager>();
-    //m_runManager->SetVerboseLevel(2);
     m_visManager = std::make_unique<G4VisExecutive>();
     m_navigator = std::make_unique<G4Navigator>();
 
@@ -154,10 +147,14 @@ void OMSim::initialiseSimulation(OMSimDetectorConstruction* p_detectorConstructi
 
     m_visManager->Initialize();
 
+    // **Initialize HitManager BEFORE RunManager Initialization**
+    //OMSimHitManager::init(args.get<std::string>("output_file") + "_hits.root");
+    OMSimHitManager::init("/Users/steveneulig/Desktop/PhDWork/" + args.get<std::string>("output_file") + "_hits.root");
+
     OMSimActionInitialization* actionInitialization = new OMSimActionInitialization();
     m_runManager->SetUserInitialization(actionInitialization);
     m_runManager->Initialize();
-    
+
     OMSimUIinterface::init();
     OMSimUIinterface &uiInterface = OMSimUIinterface::getInstance();
     uiInterface.setUI(G4UImanager::GetUIpointer());
@@ -167,6 +164,8 @@ void OMSim::initialiseSimulation(OMSimDetectorConstruction* p_detectorConstructi
 
     m_history = std::unique_ptr<G4TouchableHistory>(m_navigator->CreateTouchableHistory());
 
+    // **Ensure HitManager is initialized before being accessed**
+    // OMSimHitManager::init(...) is now called earlier
 }
 
 /**

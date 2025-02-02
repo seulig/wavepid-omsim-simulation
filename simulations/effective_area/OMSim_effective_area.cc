@@ -19,38 +19,10 @@ void runEffectiveAreaSimulation()
     OMSimEffectiveAreaAnalyisis analysisManager;
     OMSimCommandArgsTable &args = OMSimCommandArgsTable::getInstance();
     OMSimHitManager &hitManager = OMSimHitManager::getInstance();
-    AngularScan *scanner = new AngularScan(args.get<G4double>("radius"), args.get<G4double>("distance"), args.get<G4double>("wavelength"));
+    //AngularScan *scanner = new AngularScan(args.get<G4double>("radius"), args.get<G4double>("distance"), args.get<G4double>("wavelength"));
 
-    analysisManager.m_outputFileName = args.get<std::string>("output_file") + ".dat";
+    //analysisManager.m_outputFileName = args.get<std::string>("output_file") + ".dat";
 
-    bool writeHeader = !args.get<bool>("no_header");
-    if (writeHeader)
-        analysisManager.writeHeader("Phi", "Theta", "Wavelength");
-
-    // Run angle scans from file or command-line arguments
-    if (args.keyExists("angles_file"))
-    {
-        std::vector<G4PV2DDataVector> data = Tools::loadtxt(args.get<std::string>("angles_file"), true);
-        std::vector<G4double> thetas = data.at(0);
-        std::vector<G4double> phis = data.at(1);
-
-        for (std::size_t i = 0; i < thetas.size(); i++)
-        {
-            scanner->runSingleAngularScan(phis.at(i), thetas.at(i));
-            analysisManager.writeScan(phis.at(i), thetas.at(i), args.get<G4double>("wavelength"));
-            if (args.get<bool>("waveform"))
-                analysisManager.writeHitInformation(args.get<G4double>("wavelength"));
-            hitManager.reset();
-        }
-    }
-    else
-    {
-        scanner->runSingleAngularScan(args.get<G4double>("phi"), args.get<G4double>("theta"));
-        analysisManager.writeScan(args.get<G4double>("phi"), args.get<G4double>("theta"), args.get<G4double>("wavelength"));
-        if (args.get<bool>("waveform"))
-            analysisManager.writeHitInformation(args.get<G4double>("wavelength"));
-        hitManager.reset();
-    }
 }
 
 /**

@@ -1,3 +1,5 @@
+// OMSimSensitiveDetector.hh
+
 #pragma once
 
 #include "G4VSensitiveDetector.hh"
@@ -5,10 +7,10 @@
 #include "OMSimPMTResponse.hh"
 #include "OMSimOpBoundaryProcess.hh"
 #include <vector>
+#include <string>
 
 class G4Step;
 class G4TouchableHistory;
-
 
 /**
  * @enum DetectorType
@@ -40,9 +42,11 @@ struct PhotonInfo {
     G4int pmtNumber;                ///< PMT number associated with the photon hit.
     G4int detectorID;               ///< ID of the detector registering the photon.
     OMSimPMTResponse::PMTPulse PMTResponse; ///< PMT response to the photon hit.
+    G4String photonOrigin;          ///< String describing the origin of the photon
+    G4int parentID;                 ///< Parent TrackID
+    G4String parentType;            ///< Parent Particle Type (e.g., e-, mu-, etc.)
+    G4String parentProcess;            ///< Parent Particle Type (e.g., e-, mu-, etc.)
 };
-
-
 
 /**
  * @class OMSimSensitiveDetector

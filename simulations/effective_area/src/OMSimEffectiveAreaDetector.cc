@@ -22,7 +22,7 @@ void OMSimEffectiveAreaDetector::constructWorld()
 {
     // Use the world radius provided via command-line arguments
     G4double worldRadius = OMSimCommandArgsTable::getInstance().get<G4double>("world_radius");
-    m_worldSolid = new G4Orb("World", worldRadius * m);
+    m_worldSolid = new G4Orb("World", 2 * m);
 
     // Configure material properties for water
     G4Material* water = G4Material::GetMaterial("G4_WATER");

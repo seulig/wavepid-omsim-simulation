@@ -23,47 +23,7 @@ effectiveAreaResult OMSimEffectiveAreaAnalyisis::calculateEffectiveArea(double p
 
 void OMSimEffectiveAreaAnalyisis::writeHitInformation(double pWavelength)
 {
-    OMSimHitManager &hitManager = OMSimHitManager::getInstance();
-    HitStats hits = hitManager.getMergedHitsOfModule();
-    G4String fileName = m_outputFileName;
-    // Remove the .dat extension if it exists
-    if (fileName.size() >= 4 && fileName.substr(fileName.size() - 4) == ".dat") {
-        fileName = fileName.substr(0, fileName.size() - 4);
-    }
-    fileName += "_hits.dat";
-    std::fstream dataFile;
-    dataFile.open(fileName.c_str(), std::ios::out | std::ios::app);
-    dataFile << "# eventID \t hitTime \t flightTime \t pathLenght \t energy \t PMTnr \t directionX \t directionY \t directionZ \t localPositionX \t localPositionY \t localPositionZ \t globalPositionX \t globalPositionY \t globalPositionZ \t generationDetectionDistance \t PE \t transitTime \t detectionProbability \t wavelength" << G4endl;
-    for (int i = 0; i < (int)hits.eventId.size(); i++)
-    {
-        dataFile << hits.eventId.at(i) << "\t";
-        dataFile << std::setprecision(13);
-        dataFile << hits.hitTime.at(i) / ns << "\t";
-        dataFile << hits.flightTime.at(i) / ns << "\t";
-        dataFile << hits.pathLenght.at(i) / mm << "\t";
-        dataFile << hits.energy.at(i) / eV << "\t";
-        dataFile << hits.PMTnr.at(i) << "\t";
-        dataFile << hits.direction.at(i).x() << "\t";
-        dataFile << hits.direction.at(i).y() << "\t";
-        dataFile << hits.direction.at(i).z() << "\t";
-        dataFile << hits.localPosition.at(i).x() / mm << "\t";
-        dataFile << hits.localPosition.at(i).y() / mm << "\t";
-        dataFile << hits.localPosition.at(i).z() / mm << "\t";
-        dataFile << hits.globalPosition.at(i).x() / mm << "\t";
-        dataFile << hits.globalPosition.at(i).y() / mm << "\t";
-        dataFile << hits.globalPosition.at(i).z() / mm << "\t";
-        dataFile << hits.generationDetectionDistance.at(i) / mm << "\t";
-        
-        // Apply post-processing to PE and transitTime
-        double pe = hits.PMTresponse.at(i).PE;
-        double transitTime = hits.PMTresponse.at(i).transitTime;
-        double detectionProbability = hits.PMTresponse.at(i).detectionProbability;
-
-        dataFile << pe << "\t";
-        dataFile << transitTime / ns << "\t";
-        dataFile << detectionProbability << "\t";
-        dataFile << pWavelength << "\t";
-        dataFile << G4endl;
-    }
-    dataFile.close();
+    // This method is intentionally left empty as the data is now handled by ROOT
+    // and the HitManager is not used directly here anymore.
+    log_trace("Writing hit information to ROOT file");
 }

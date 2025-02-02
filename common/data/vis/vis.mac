@@ -1,6 +1,10 @@
 # Macro file for visualization settings in the initialization phase
+/vis/geometry/list
 
-/vis/open OGLS 800x800-0+0
+#/vis/open OGLS 800x800-0+0
+#/vis/open OGLIQt 800x800-0+0
+/vis/open OGLSQt 800x800-0+0
+
 #/vis/open RayTracerX 800x800-0+0
 
 # Disable auto refresh and quieten vis messages whilst scene and

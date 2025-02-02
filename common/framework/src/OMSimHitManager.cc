@@ -5,13 +5,14 @@
 #include "G4EventManager.hh"
 #include "G4Event.hh"
 #include <numeric>
+#include <stdexcept>
 
 G4Mutex OMSimHitManager::m_mutex = G4Mutex();
 OMSimHitManager *OMSimHitManager::m_instance = nullptr;
 G4ThreadLocal OMSimHitManager::ThreadLocalData *OMSimHitManager::m_threadData = nullptr;
 
 
-OMSimHitManager::OMSimHitManager(): m_currentIndex(-1)
+OMSimHitManager::OMSimHitManager(): m_currentIndex(-1), fROOTManager(nullptr)
 {
 };
 
@@ -20,9 +21,10 @@ OMSimHitManager::OMSimHitManager(): m_currentIndex(-1)
  * 
  * This method is normally called in OMSim::initialiseSimulation.
  */
-void OMSimHitManager::init()
+void OMSimHitManager::init(const std::string& filename)
 {
 	if (!g_hitManager) g_hitManager = new OMSimHitManager();
+    g_hitManager->fROOTManager = new ROOTHitManager(filename);
 }
 
 /**
@@ -32,8 +34,11 @@ void OMSimHitManager::init()
  */
 void OMSimHitManager::shutdown()
 {
-	delete g_hitManager;
-	g_hitManager = nullptr;
+	if (g_hitManager) {
+        delete g_hitManager->fROOTManager;
+        delete g_hitManager;
+        g_hitManager = nullptr;
+    }
 }
 
 
@@ -96,48 +101,92 @@ void applyPermutation(std::vector<T> &p_vector, const std::vector<std::size_t> &
  * @param p_response PMT's p_response to the detected photon, encapsulated as a `PMTPulse`.
  * @param p_moduleNumber ID of the module in which the photon was detected.
  */
+
 void OMSimHitManager::appendHitInfo(
-	G4int p_eventid,
-	G4double p_globalTime,
-	G4double p_localTime,
-	G4double p_trackLength,
-	G4double p_energy,
-	G4int p_PMTHitNumber,
-	G4ThreeVector p_momentumDirection,
-	G4ThreeVector p_globalPos,
-	G4ThreeVector p_localPos,
-	G4double p_distance,
-	OMSimPMTResponse::PMTPulse p_response,
-	G4int p_moduleNumber)
+    G4int p_eventid,
+    G4double p_globalTime,
+    G4double p_localTime,
+    G4double p_trackLength,
+    G4double p_energy,
+    G4int p_PMTHitNumber,
+    G4ThreeVector p_momentumDirection,
+    G4ThreeVector p_globalPos,
+    G4ThreeVector p_localPos,
+    G4double p_distance,
+    OMSimPMTResponse::PMTPulse p_response,
+    G4String p_photonOrigin,
+    G4int pParentID,
+    std::string pParentType,
+    G4String pParentProcess,
+    G4double p_wavelength, // Newly added parameter
+    G4int p_moduleNumber)
 {
+    if (!m_threadData)
+    {
+        log_debug("Initialized m_threadData for thread {} seed {}", G4Threading::G4GetThreadId(),  G4Random::getTheSeed());
+        m_threadData = new ThreadLocalData();
+    }
 
-	if (!m_threadData)
-	{
-		log_debug("Initialized m_threadData for thread {} seed {}", G4Threading::G4GetThreadId(),  G4Random::getTheSeed());
-		m_threadData = new ThreadLocalData();
-	}
+    // Check if the module exists in the thread-local map
+    if (m_threadData->moduleHits.find(p_moduleNumber) == m_threadData->moduleHits.end())
+    {
+        // Create a new HitStats for this module
+        m_threadData->moduleHits[p_moduleNumber] = HitStats();
+    }
 
-	// Check if the module exists in the thread-local map
-	if (m_threadData->moduleHits.find(p_moduleNumber) == m_threadData->moduleHits.end())
-	{
-		// Create a new HitStats for this module
-		m_threadData->moduleHits[p_moduleNumber] = HitStats();
-	}
-	
-	auto &moduleHits = m_threadData->moduleHits[p_moduleNumber];
-	//log_debug("Thread {} Seed {} event {} size {}", G4Threading::G4GetThreadId(),  G4Random::getTheSeed(), eventID, moduleHits.eventId.size());
-	moduleHits.eventId.push_back(p_eventid);
-	moduleHits.hitTime.push_back(p_globalTime);
-	moduleHits.flightTime.push_back(p_localTime);
-	moduleHits.pathLenght.push_back(p_trackLength);
-	moduleHits.energy.push_back(p_energy);
-	moduleHits.PMTnr.push_back(p_PMTHitNumber);
-	moduleHits.direction.push_back(p_momentumDirection);
-	moduleHits.globalPosition.push_back(p_globalPos);
-	moduleHits.localPosition.push_back(p_localPos);
-	moduleHits.generationDetectionDistance.push_back(p_distance);
-	moduleHits.PMTresponse.push_back(p_response);
-	log_trace("Saved hit nr {} on module {} sensor {} (thread {})", moduleHits.eventId.size(), p_moduleNumber, p_PMTHitNumber, G4Threading::G4GetThreadId());
+    auto &moduleHits = m_threadData->moduleHits[p_moduleNumber];
+
+    // Append all information
+    moduleHits.eventId.push_back(p_eventid);
+    moduleHits.hitTime.push_back(p_globalTime);
+    moduleHits.flightTime.push_back(p_localTime);
+    moduleHits.pathLenght.push_back(p_trackLength);
+    moduleHits.energy.push_back(p_energy);
+    moduleHits.PMTnr.push_back(p_PMTHitNumber);
+    moduleHits.direction.push_back(p_momentumDirection);
+    moduleHits.globalPosition.push_back(p_globalPos);
+    moduleHits.localPosition.push_back(p_localPos);
+    moduleHits.generationDetectionDistance.push_back(p_distance);
+    moduleHits.PMTresponse.push_back(p_response);
+    moduleHits.photonOrigin.push_back(p_photonOrigin);
+    moduleHits.parentID.push_back(pParentID);
+    moduleHits.parentType.push_back(pParentType); // Newly added
+    moduleHits.parentProcess.push_back(pParentProcess); // Newly added
+
+    log_trace("Saved hit nr {} on module {} sensor {} (thread {})", moduleHits.eventId.size(), p_moduleNumber, p_PMTHitNumber, G4Threading::G4GetThreadId());
+
+    // Create a PhotonInfoROOT object
+    PhotonInfoROOT info;
+    info.eventID = p_eventid;
+    info.hitTime = p_globalTime;
+    info.flightTime = p_localTime;
+    info.pathLenght = p_trackLength;
+    info.generationDetectionDistance = p_distance;
+    info.energy = p_energy;
+    info.PMTnr = p_PMTHitNumber;
+    info.dir_x = p_momentumDirection.x();
+    info.dir_y = p_momentumDirection.y();
+    info.dir_z = p_momentumDirection.z();
+    info.localPos_x = p_localPos.x();
+    info.localPos_y = p_localPos.y();
+    info.localPos_z = p_localPos.z();
+    info.globalPos_x = p_globalPos.x();
+    info.globalPos_y = p_globalPos.y();
+    info.globalPos_z = p_globalPos.z();
+    info.deltaPos_x = p_distance; // Or calculate appropriately
+    info.deltaPos_y = 0;         // Set appropriately
+    info.deltaPos_z = 0;         // Set appropriately
+    info.wavelength = p_wavelength; // Now correctly passed
+    info.parentID = pParentID;
+    info.parentType = pParentType;
+    info.photonOrigin = p_photonOrigin;
+    info.parentProcess = pParentProcess;
+    // Fill the ROOT tree
+    if (fROOTManager) {
+        fROOTManager->FillPhotonInfo(info);
+    } else {
+        log_error("ROOTHitManager not initialized!");
+    }
 }
 
 /**
@@ -252,6 +301,8 @@ void OMSimHitManager::sortHitStatsByTime(HitStats &p_hits)
 	applyPermutation(p_hits.globalPosition, indices);
 	applyPermutation(p_hits.generationDetectionDistance, indices);
 	applyPermutation(p_hits.PMTresponse, indices);
+    applyPermutation(p_hits.photonOrigin, indices);
+    applyPermutation(p_hits.parentID, indices);
 }
 
 /**
@@ -346,6 +397,9 @@ void OMSimHitManager::mergeThreadData()
 			globalHits.globalPosition.insert(globalHits.globalPosition.end(), hits.globalPosition.begin(), hits.globalPosition.end());
 			globalHits.generationDetectionDistance.insert(globalHits.generationDetectionDistance.end(), hits.generationDetectionDistance.begin(), hits.generationDetectionDistance.end());
 			globalHits.PMTresponse.insert(globalHits.PMTresponse.end(), hits.PMTresponse.begin(), hits.PMTresponse.end());
+            globalHits.photonOrigin.insert(globalHits.photonOrigin.end(), hits.photonOrigin.begin(), hits.photonOrigin.end());
+            globalHits.parentID.insert(globalHits.parentID.end(), hits.parentID.begin(), hits.parentID.end());
+            globalHits.parentProcess.insert(globalHits.parentProcess.end(), hits.parentProcess.begin(), hits.parentProcess.end());
 		}
 		delete m_threadData;
 		m_threadData = nullptr;

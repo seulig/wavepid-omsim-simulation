@@ -1,23 +1,15 @@
-/**
- * @file OMSimHitManager.hh
- * @brief Defines structures and classes related to optical module photon hit management.
- *
- * This file describes the `HitStats` structure which stores detailed photon hit parameters
- * and the `OMSimHitManager` class which centralizes and manages photon hit data across
- * different optical modules. The manager ensures unified access to photon hit information,
- * with functionalities to append, retrieve, and manipulate hit data.
- *
- * @ingroup common
- */
-
 #pragma once
 
 #include "OMSimPMTResponse.hh"
+#include "ROOTHitManager.hh" // Added this include
 
 #include <G4ThreeVector.hh>
 #include <fstream>
 #include <G4AutoLock.hh>
 #include <G4Threading.hh>
+#pragma once
+
+
 
 /**
  * @struct HitStats
@@ -37,6 +29,10 @@ struct HitStats
     std::vector<G4ThreeVector> globalPosition;           ///< Global position of the detected photon.
     std::vector<G4double> generationDetectionDistance;   ///< Distance between generation and detection of photon.
     std::vector<OMSimPMTResponse::PMTPulse> PMTresponse; ///< PMT's response to the detected photon, encapsulated as a `PMTPulse`.
+    std::vector<G4String> photonOrigin;                  ///< String describing the origin of the photon
+    std::vector<G4int> parentID;                  ///< String describing the origin of the photon
+    std::vector<G4String> parentType;                    ///< Parent Particle Type (e.g., e-, mu-, etc.)
+    std::vector<G4String> parentProcess;                 ///< String describing the process that created the parent particle
 };
 
 /**
@@ -60,23 +56,30 @@ class OMSimHitManager
     OMSimHitManager &operator=(const OMSimHitManager &) = delete;
 
 public:
-    static void init();
+    static void init(const std::string& filename);
     static void shutdown();
     static OMSimHitManager &getInstance();
 
+
     void appendHitInfo(
         G4int p_eventid,
-        G4double pGlobalTime,
-        G4double pLocalTime,
-        G4double pTrackLength,
-        G4double pEnergy,
+        G4double p_globalTime,
+        G4double p_localTime,
+        G4double p_trackLength,
+        G4double p_energy,
         G4int pPMTHitNumber,
         G4ThreeVector pMomentumDirection,
         G4ThreeVector pGlobalPos,
         G4ThreeVector pLocalPos,
-        G4double pDistance,
+        G4double p_distance,
         OMSimPMTResponse::PMTPulse pResponse,
-        G4int pModuleIndex = 0);
+        G4String pPhotonOrigin,
+        G4int pParentID,
+        std::string pParentType,
+        G4String pParentProcess,
+        G4double p_wavelength, // Newly added parameter
+        G4int pModuleIndex);    // Ensure correct naming if different
+
 
     void reset();
     std::vector<double> countMergedHits(int pModuleIndex = 0, bool pDEweight = false);
@@ -103,7 +106,7 @@ private:
         std::map<G4int, HitStats> moduleHits;
     };
     G4ThreadLocal static ThreadLocalData *m_threadData;
+    ROOTHitManager* fROOTManager = nullptr;
 };
 
 inline OMSimHitManager *g_hitManager = nullptr;
-

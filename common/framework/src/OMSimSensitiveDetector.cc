@@ -1,9 +1,11 @@
-/**
- * @todo Test several optical modules of same type with new type
- */
+// OMSimSensitiveDetector.cc
+
+#include "OMSimTrackingAction.hh"
+#include "G4EventManager.hh"
 
 #include "OMSimSensitiveDetector.hh"
 #include "OMSimPMTResponse.hh"
+#include "OMSimOpBoundaryProcess.hh"
 #include "OMSimCommandArgsTable.hh"
 #include "OMSimHitManager.hh"
 
@@ -20,6 +22,9 @@
 #include "G4ProcessManager.hh"
 #include "OMSimTools.hh"
 #include <G4EventManager.hh>
+#include "G4RunManager.hh" // Added this include
+#include "G4TransportationManager.hh" // Added this include
+#include "G4TrackingManager.hh" // Added this include
 
 thread_local G4OpBoundaryProcess *OMSimSensitiveDetector::m_boundaryProcess = nullptr;
 
@@ -28,8 +33,8 @@ thread_local G4OpBoundaryProcess *OMSimSensitiveDetector::m_boundaryProcess = nu
  * @param p_name Name of the sensitive detector.
  * @param p_detectorType Type of the detector (e.g., PMT, VolumePhotonDetector).
  */
-OMSimSensitiveDetector::OMSimSensitiveDetector(G4String p_name, DetectorType p_detectorType)
-    : G4VSensitiveDetector(p_name), m_detectorType(p_detectorType), m_PMTResponse(nullptr), m_QEcut(OMSimCommandArgsTable::getInstance().get<bool>("efficiency_cut"))
+OMSimSensitiveDetector::OMSimSensitiveDetector(G4String p_name, DetectorType pDetectorType)
+    : G4VSensitiveDetector(p_name), m_detectorType(pDetectorType), m_PMTResponse(nullptr), m_QEcut(OMSimCommandArgsTable::getInstance().get<bool>("efficiency_cut"))
 {
 }
 
@@ -127,31 +132,116 @@ G4bool OMSimSensitiveDetector::ProcessHits(G4Step *p_step, G4TouchableHistory *p
  * @param p_step The current step information.
  * @return PhotonInfo struct containing the photon details.
  */
+
 PhotonInfo OMSimSensitiveDetector::getPhotonInfo(G4Step *p_step)
 {
-  PhotonInfo info;
-  G4Track *track = p_step->GetTrack();
+    PhotonInfo info;
+    G4Track *track = p_step->GetTrack();
 
-  G4double h = 4.135667696E-15 * eV * s;
-  G4double c = 2.99792458E17 * nm / s;
-  G4double lEkin = track->GetKineticEnergy();
-  info.eventID = G4EventManager::GetEventManager()->GetConstCurrentEvent()->GetEventID();
-  info.globalTime = track->GetGlobalTime();
-  info.localTime = track->GetLocalTime();
-  info.trackLength = track->GetTrackLength() / m;
-  info.kineticEnergy = lEkin;
-  info.wavelength = h * c / lEkin;
-  info.globalPosition = track->GetPosition();
-  info.localPosition = p_step->GetPostStepPoint()->GetTouchableHandle()->GetHistory()->GetTopTransform().TransformPoint(info.globalPosition);
-  info.momentumDirection = track->GetMomentumDirection();
-  info.deltaPosition = track->GetVertexPosition() - info.globalPosition;
-  info.detectorID = atoi(SensitiveDetectorName);
-  if (m_PMTResponse)
-    info.PMTResponse = m_PMTResponse->processPhotocathodeHit(info.localPosition.x(), info.localPosition.y(), info.wavelength);
-  else
-    info.PMTResponse = OMSimPMTResponse::PMTPulse({0, 0, 0});
-  return info;
+    // 1) Get the creation process name
+    G4String creatorProcessName;
+    G4String motherParticleName = "";
+
+    G4String motherProcessName = "";
+    const G4VProcess* creatorProcess = track->GetCreatorProcess();
+    if (creatorProcess) {
+        creatorProcessName = creatorProcess->GetProcessName();
+    } else {
+        // If there is no creator process, the track is a primary
+        creatorProcessName = "Primary";
+    }
+
+    // 2) Retrieve parent particle type using TrackingAction
+    G4int parentTrackID = track->GetParentID();
+    
+    if (parentTrackID != 0) { // Ensure it's not a primary particle
+        // Retrieve parent particle type from TrackingAction
+        motherParticleName = OMSimTrackingAction::GetInstance().GetParticleType(parentTrackID);
+        
+        // Retrieve parent process name from TrackingAction
+        motherProcessName = OMSimTrackingAction::GetInstance().GetCreatorProcess(parentTrackID);
+        
+        // Handle cases where information might not be available
+        if (motherParticleName.empty()) {
+            motherParticleName = "UnknownParticle";
+        }
+        if (motherProcessName.empty()) {
+            motherProcessName = "UnknownProcess";
+        }
+    }
+    std::string parentParticleType;
+    if (parentTrackID == 0) {
+        // Primary particle
+        parentParticleType = track->GetDefinition()->GetParticleName();
+    } else {
+        // Secondary or higher
+        parentParticleType = OMSimTrackingAction::GetInstance().GetParticleType(parentTrackID);
+        if (parentParticleType == "Unknown") {
+            parentParticleType = "UnknownParent";
+        }
+    }
+
+    // 3) Fill out the PhotonInfo fields
+    info.parentID      = parentTrackID;
+    info.parentType    = parentParticleType;
+    info.eventID       = G4EventManager::GetEventManager()->GetConstCurrentEvent()->GetEventID();
+    info.globalTime    = track->GetGlobalTime();
+    info.localTime     = track->GetLocalTime();
+    info.trackLength   = track->GetTrackLength() / m;
+    info.kineticEnergy = track->GetKineticEnergy();
+
+    // Planck's constant (eV·s) and speed of light (nm/s), for wavelength
+    static const G4double planck_eVs = 4.135667696e-15 * eV * s;
+    static const G4double c_nm_s     = 2.99792458e17 * nm / s;
+    info.wavelength = planck_eVs * c_nm_s / info.kineticEnergy;
+
+    info.globalPosition = track->GetPosition();
+    G4ThreeVector localPos = p_step->GetPostStepPoint()
+                                ->GetTouchableHandle()
+                                ->GetHistory()
+                                ->GetTopTransform()
+                                .TransformPoint(info.globalPosition);
+    info.localPosition    = localPos;
+    info.momentumDirection= track->GetMomentumDirection();
+    info.deltaPosition    = track->GetVertexPosition() - info.globalPosition;
+
+    info.pmtNumber  = 0; // Will be set elsewhere if you find a PMT volume
+    info.detectorID = std::atoi(SensitiveDetectorName);
+
+    // 4) If you have a PMT response object, compute detection probability
+    if (m_PMTResponse) {
+        info.PMTResponse = m_PMTResponse->processPhotocathodeHit(localPos.x(), localPos.y(), info.wavelength);
+    } else {
+        info.PMTResponse = OMSimPMTResponse::PMTPulse({0, 0, 0});
+    }
+
+    // 5) Identify the origin (Cherenkov, eBrem, etc.) plus mother type
+    if (creatorProcessName == "Cerenkov") {
+        info.photonOrigin = "Cerenkov";
+    }
+    else if (creatorProcessName == "eBrem") {
+        info.photonOrigin = "Bremsstrahlung";
+    }
+    else if (creatorProcessName == "Scintillation") {
+        info.photonOrigin = "Scintillation";
+    }
+    else if (creatorProcessName == "Primary") {
+        if (track->GetDefinition() == G4OpticalPhoton::Definition()) {
+            info.photonOrigin = "PrimaryOpticalPhoton";
+        } else {
+            info.photonOrigin = "Primary";
+        }
+    }
+    else {
+        info.photonOrigin = "Other";
+    }
+
+    // Append “ from [parentParticleType]”
+    info.photonOrigin += " from " + parentParticleType;
+    info.parentProcess = motherProcessName;
+    return info;
 }
+
 
 /**
  * @brief Checks if the photon was absorbed in the volume.
@@ -249,31 +339,40 @@ G4bool OMSimSensitiveDetector::handleGeneralPhotonDetector(G4Step *p_step, G4Tou
  * @brief Stores photon hit information into the HitManager
  * @param p_info The photon hit information.
  */
+// OMSimSensitiveDetector.cc
+
 void OMSimSensitiveDetector::storePhotonHit(PhotonInfo &p_info)
 {
-  OMSimHitManager &hitManager = OMSimHitManager::getInstance();
-  hitManager.appendHitInfo(
-      p_info.eventID,
-      p_info.globalTime,
-      p_info.localTime,
-      p_info.trackLength,
-      p_info.kineticEnergy / eV,
-      p_info.pmtNumber,
-      p_info.momentumDirection,
-      p_info.globalPosition,
-      p_info.localPosition,
-      p_info.deltaPosition.mag() / m,
-      p_info.PMTResponse,
-      p_info.detectorID);
+    OMSimHitManager &hitManager = OMSimHitManager::getInstance();
+    hitManager.appendHitInfo(
+        p_info.eventID,
+        p_info.globalTime,
+        p_info.localTime,
+        p_info.trackLength,
+        p_info.kineticEnergy,
+        p_info.pmtNumber,
+        p_info.momentumDirection,
+        p_info.globalPosition,
+        p_info.localPosition,
+        p_info.deltaPosition.mag(),
+        p_info.PMTResponse,
+        p_info.photonOrigin,
+        p_info.parentID,        // Correctly pass parentID
+        p_info.parentType,      // Correctly pass parentType
+        p_info.parentProcess,      // Correctly pass parentType
+        p_info.wavelength,      // Pass wavelength
+        p_info.detectorID       // Pass moduleIndex (ensure this is correct)
+    );
 }
+
 
 /**
  * @brief Stop the particle from propagating further. Necessary for 100% efficient detectors.
  */
-void OMSimSensitiveDetector::killParticle(G4Track *p_track)
+void OMSimSensitiveDetector::killParticle(G4Track *pTrack)
 {
-  if (p_track->GetTrackStatus() != fStopAndKill)
+  if (pTrack->GetTrackStatus() != fStopAndKill)
   {
-    p_track->SetTrackStatus(fStopAndKill);
+    pTrack->SetTrackStatus(fStopAndKill);
   }
 }

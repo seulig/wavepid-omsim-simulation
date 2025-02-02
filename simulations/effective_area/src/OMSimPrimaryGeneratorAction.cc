@@ -31,9 +31,9 @@ OMSimPrimaryGeneratorAction::OMSimPrimaryGeneratorAction() {
     }
 
     fParticleGun->SetParticleDefinition(particle);
-    fParticleGun->SetParticleEnergy(0.91 * GeV);
+    fParticleGun->SetParticleEnergy(5 * GeV);
 
-    G4ThreeVector position(-1.7*m, 0.0*m, 0.2*m);
+    G4ThreeVector position(-1.1*m, 0.0*m, 0.2*m);
     fParticleGun->SetParticlePosition(position);
 
     G4ThreeVector direction(1, 0.0, 0.0);

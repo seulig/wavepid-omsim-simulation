@@ -4,6 +4,7 @@
 
 #include <G4Gamma.hh>
 #include <G4Electron.hh>
+#include <G4Positron.hh>
 #include <G4MuonMinus.hh>
 #include <G4MuonPlus.hh>
 #include <G4PionMinus.hh>
@@ -22,6 +23,7 @@
 
 #include <G4eIonisation.hh>
 #include <G4eBremsstrahlung.hh>
+#include <G4ePairProduction.hh>
 #include <G4Cerenkov.hh>
 #include <G4Scintillation.hh>
 #include <G4PhotoElectricEffect.hh>
@@ -40,6 +42,7 @@
 #include <G4MuBremsstrahlung.hh>
 #include <G4MuPairProduction.hh>
 #include <G4MuMultipleScattering.hh>
+#include <G4eMultipleScattering.hh>
 
 // Include Hadronic Physics Headers for Pions
 #include <G4HadronElastic.hh>
@@ -100,7 +103,18 @@ void OMSimPhysicsList::ConstructProcess() {
         if (particleName == "e-") {
             // Add EM processes for electrons
             physicsHelper->RegisterProcess(new G4eIonisation(), particle);
+            physicsHelper->RegisterProcess(new G4eMultipleScattering(), particle);
             physicsHelper->RegisterProcess(new G4eBremsstrahlung(), particle);
+            physicsHelper->RegisterProcess(new G4ePairProduction(), particle);
+            
+        } 
+        if (particleName == "e+") {
+            // Add EM processes for electrons
+            physicsHelper->RegisterProcess(new G4eIonisation(), particle);
+            physicsHelper->RegisterProcess(new G4eMultipleScattering(), particle);
+            physicsHelper->RegisterProcess(new G4eBremsstrahlung(), particle);
+            physicsHelper->RegisterProcess(new G4ePairProduction(), particle);
+            
         } 
         else if (particleName == "mu-") {
             // Add EM processes for muons

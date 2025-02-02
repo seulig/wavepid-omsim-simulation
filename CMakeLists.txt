@@ -1,5 +1,5 @@
 # Minimum version of CMake required
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.15 FATAL_ERROR)  # Update to 3.15+ for modern CMake features
 
 # Project name
 project(OMSim)
@@ -21,14 +21,22 @@ else()
     find_package(Geant4 REQUIRED)
 endif()
 
+# Add Boost global placeholder definition
 add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 # Set RPATH for runtime linkage
 set(CMAKE_INSTALL_RPATH "/opt/homebrew/geant4-v11.2.2-install/lib")
 set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 
-# For logging with spdlog
+# Prefer Homebrew for dependencies
+list(APPEND CMAKE_PREFIX_PATH /opt/homebrew/)
+
+# Find fmt and spdlog
+find_package(fmt REQUIRED HINTS /opt/homebrew/lib/cmake/fmt)
 find_package(spdlog REQUIRED)
+
+# Ensure spdlog uses the external fmt library
+add_definitions(-DSPDLOG_FMT_EXTERNAL)
 
 # Find Boost library and specify which components to use
 find_package(Boost REQUIRED COMPONENTS program_options)
@@ -62,6 +70,7 @@ set(COMMON_LIBRARIES
     ${OPENSSL_LIBRARIES}
     Boost::program_options
     spdlog::spdlog
+    fmt::fmt
     /opt/homebrew/geant4-v11.2.2-install/lib/libG4RayTracer.dylib
     $<$<BOOL:${MINGW}>:ws2_32>
 )
