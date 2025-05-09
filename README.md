@@ -12,12 +12,19 @@ For the latest updates and information, check our [GitHub repository](https://gi
 
 ## Running the new wavePID study
 To run wavePID, you can compile and hit ./OMSim_wavePID -v --detector_type 3 -n 1 -s 10 -E 0.2 -p "mu-" in your Terminal.
+
 -v is opening the GUI
+
 --detector_type is picking the types implemented by OMSim where 3 is the standard pDOM
+
 -n selects the number of events you want to simulate (one particle injected per event)
+
 -s is the distance between the DOM and the origin and it scaled the size of the world and injection point with it (10 relates to 10m perpendicular distance between the track and the DOM)
+
 -E selects the energy in GeV (0.2 relates to 200 MeV)
+
 -p defines the particle type where "e-" is implemented as electron and "mu-" and negatively charged muon
+
 
 ## Installation
 
