@@ -1,11 +1,11 @@
 # Create lists of source files
-file(GLOB EFFECTIVE_AREA_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc")
+file(GLOB WAVEPID_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc")
 
 # Create an executable
 add_executable(OMSim_wavePID 
     ${CMAKE_CURRENT_SOURCE_DIR}/OMSim_wavePID.cc 
     ${COMMON_SOURCES} 
-    ${EFFECTIVE_AREA_SOURCES} 
+    ${WAVEPID_SOURCES} 
 )
 
 # Specify include directories for this executable
