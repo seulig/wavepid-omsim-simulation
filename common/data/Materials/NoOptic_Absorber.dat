@@ -1,0 +1,11 @@
+{
+   "jName": "NoOptic_Absorber",
+   "jComponents": {
+      "G4_C": 1.0
+   },
+   "jDensity": {
+      "jValue": 1,
+      "jUnit": "g/cm3"
+   },
+   "jState": "kStateSolid"
+}

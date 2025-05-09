@@ -1,0 +1,18 @@
+{
+   "jName": "Surf_PadSurface",
+   "jModel": "unified",
+   "jFinish": "ground",
+   "jType": "dielectric_metal",
+   "jProperties": {
+      "REFLECTIVITY": {
+         "jWavelength": [
+            150,
+            730
+         ],
+         "jValue": [
+            0.1,
+            0.1
+         ]
+      }
+   }
+}

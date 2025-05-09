@@ -1,0 +1,9 @@
+file(GLOB FRAMEWORK_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/framework/src/*.cc")
+file(GLOB GEO_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/geometry_construction/src/*.cc")
+
+file(GLOB FRAMEWORK_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/framework/include/*.hh")
+file(GLOB GEO_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/geometry_construction/include/*.hh")
+
+# Combine both source lists into COMMON_SOURCES
+set(COMMON_SOURCES ${FRAMEWORK_SOURCES} ${GEO_SOURCES} PARENT_SCOPE)
+set(COMMON_HEADERS ${FRAMEWORK_HEADERS} ${GEO_HEADERS} PARENT_SCOPE)

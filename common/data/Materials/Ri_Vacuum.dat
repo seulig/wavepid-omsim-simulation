@@ -1,0 +1,23 @@
+{
+   "jName": "Ri_Vacuum",
+   "jComponents": {
+      "G4_AIR": 1.0
+   },
+   "jDensity": {
+      "jValue": 0.0258,
+      "jUnit": "mg/cm3"
+   },
+   "jState": "kStateGas",
+   "jProperties": {
+      "RINDEX": {
+         "jValue": [
+            1.0003,
+            1.0003
+         ],
+         "jWavelength": [
+            150,
+            730
+         ]
+      }
+   }
+}
