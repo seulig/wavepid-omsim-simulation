@@ -1,5 +1,6 @@
-#  OMSim Geant4 Framework
-[TOC]
+#  OMSim Geant4 Framework --> wavePID implementation
+This repo is an extension to the fantastic work that can be found here: https://github.com/icecube/OMSim
+This work adds some extra features that allow the injection of particles at a fixed energy, direction, position, within a world of SPICE ice with one DOM, and track the secondary particles and cherenkov photons they create which ultimately reach the DOM. It is used to understand the time profiles of light yield from different particles.
 
 **Note:** This project is under active development. If you're interested in using OMSim, please contact martin.u on IC-slack.
 
